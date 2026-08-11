@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="idiolect-token" content="__IDIOLECT_TOKEN__">
+    <title>Idiolect</title>
+    <link rel="stylesheet" href="/static/app.css">
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="wordmark" href="/" aria-label="Idiolect home">IDIOLECT</a>
+      <div id="codex-status" class="codex-status" aria-live="polite">
+        <span class="status-dot" aria-hidden="true"></span>
+        Checking Codex
+      </div>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="step-label">Local style compiler</p>
+          <h1 id="page-title">Turn your writing into a Codex skill.</h1>
+        </div>
+        <p class="intro-copy">
+          Idiolect finds choices that recur across your work, checks them against held-out text,
+          then builds a skill you review before installing.
+        </p>
+      </section>
+
+      <aside class="privacy-note" aria-label="Privacy and processing notice">
+        <strong>Your samples are evidence, not instructions.</strong>
+        This local app keeps raw text out of the generated skill and does not save it. Selected
+        excerpts are sent to OpenAI for two Codex analysis passes under your ChatGPT workspace's
+        data controls.
+      </aside>
+
+      <div id="error-box" class="error-box" role="alert" tabindex="-1" hidden></div>
+
+      <section id="setup-panel" class="workspace" aria-labelledby="setup-title">
+        <div class="section-heading">
+          <span>01</span>
+          <h2 id="setup-title">Build the corpus</h2>
+        </div>
+
+        <form id="corpus-form" novalidate>
+          <div class="form-grid">
+            <div class="field">
+              <label for="skill-name">Skill name</label>
+              <input id="skill-name" name="skill_name" type="text" maxlength="80" value="write-like-me" required>
+              <p class="hint">Converted to lowercase hyphen-case.</p>
+            </div>
+            <div class="field">
+              <label for="voice-label">Voice label</label>
+              <input id="voice-label" name="voice_label" type="text" maxlength="60" value="the author" required>
+              <p class="hint">Used only in the skill's visible title.</p>
+            </div>
+            <div class="field field-wide">
+              <label for="purpose">Where should this voice be used? <span>Optional</span></label>
+              <textarea id="purpose" name="purpose" rows="3" maxlength="600" placeholder="For example: client emails, essays, and technical explanations."></textarea>
+            </div>
+          </div>
+
+          <div class="sample-grid">
+            <div class="upload-panel">
+              <label class="file-label" for="files">
+                <span>Add text files</span>
+                <small>UTF-8 .txt or .md · 1 MB each</small>
+              </label>
+              <input id="files" name="files" type="file" accept=".txt,.md,.markdown,text/plain,text/markdown" multiple>
+              <p class="evidence-note">
+                600 clean words minimum. Three independent documents and 3,000+ words give a more reliable profile.
+              </p>
+            </div>
+            <div class="paste-panel field">
+              <label for="pasted-text">Or paste writing</label>
+              <textarea id="pasted-text" name="pasted_text" rows="8" maxlength="1000000" placeholder="Paste a self-authored sample here."></textarea>
+              <p id="paste-count" class="hint">0 estimated words</p>
+              <label class="paste-confirmation">
+                <input id="pasted-authorship-confirmation" type="checkbox" disabled>
+                <span>This pasted text is fully mine and represents my current voice.</span>
+              </label>
+            </div>
+          </div>
+
+          <div id="sample-list" class="sample-list" aria-live="polite"></div>
+
+          <label class="consent-row">
+            <input id="rights-confirmation" type="checkbox" required>
+            <span>I wrote these samples or have permission to use them, and I marked assisted or edited work accurately.</span>
+          </label>
+
+          <div class="action-row">
+            <p>Two Codex runs. No automatic retries. No API-key fallback.</p>
+            <button id="generate-button" class="primary-button" type="submit" disabled>Analyze my voice</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="progress-panel" class="workspace" aria-labelledby="progress-title" hidden>
+        <div class="section-heading">
+          <span>02</span>
+          <h2 id="progress-title">Analyze the evidence</h2>
+        </div>
+        <div class="progress-layout">
+          <div>
+            <p id="progress-stage" class="progress-stage" aria-live="polite">Queued</p>
+            <p id="progress-message" class="progress-message">Waiting for the local Codex worker.</p>
+          </div>
+          <button id="cancel-button" class="secondary-button" type="button">Cancel run</button>
+        </div>
+        <ol class="stage-list" aria-label="Analysis stages">
+          <li data-stage="queued">Queue</li>
+          <li data-stage="analyzing">Discovery corpus</li>
+          <li data-stage="validating">Held-out check</li>
+          <li data-stage="review">Review</li>
+        </ol>
+      </section>
+
+      <section id="review-panel" class="workspace" aria-labelledby="review-title" hidden>
+        <div class="section-heading">
+          <span>03</span>
+          <h2 id="review-title" tabindex="-1">Review the profile</h2>
+        </div>
+        <div class="review-intro">
+          <div>
+            <p id="profile-summary" class="profile-summary"></p>
+            <p id="corpus-summary" class="corpus-summary"></p>
+          </div>
+          <button id="build-button" class="primary-button" type="button" disabled>Build selected traits</button>
+        </div>
+        <div id="warning-list" class="warning-list"></div>
+        <fieldset class="trait-fieldset">
+          <legend>Accepted voice traits</legend>
+          <p>Check at least three traits. Each check approves exactly the instruction and scope shown; leave anything circumstantial or wrong unchecked. The source excerpts stay private.</p>
+          <div id="trait-list" class="trait-list"></div>
+        </fieldset>
+      </section>
+
+      <section id="result-panel" class="workspace result-panel" aria-labelledby="result-title" hidden>
+        <div class="section-heading">
+          <span>04</span>
+          <h2 id="result-title" tabindex="-1">Use the skill</h2>
+        </div>
+        <div class="result-grid">
+          <div>
+            <p class="result-lead">The package contains fixed instructions and a declarative voice profile. It contains no uploaded documents.</p>
+            <div class="result-actions">
+              <button id="download-button" class="primary-button" type="button">Download ZIP</button>
+              <button id="install-button" class="secondary-button" type="button">Install locally</button>
+            </div>
+            <p id="install-result" class="install-result" aria-live="polite"></p>
+          </div>
+          <details>
+            <summary>Preview the complete package</summary>
+            <pre id="skill-preview"></pre>
+          </details>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>Localhost only</span>
+      <span>Evidence before imitation</span>
+    </footer>
+  </body>
+</html>
